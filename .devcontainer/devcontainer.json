@@ -1,0 +1,61 @@
+{
+  // Based on Anthropic's reference container:
+  // https://github.com/anthropics/claude-code/tree/main/.devcontainer
+  // Docs: https://code.claude.com/docs/en/devcontainer
+  "name": "Cohort 005 Project (Claude sandbox)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "TZ": "${localEnv:TZ:America/Los_Angeles}",
+      "CLAUDE_CODE_VERSION": "latest",
+      "GIT_DELTA_VERSION": "0.18.2",
+      "ZSH_IN_DOCKER_VERSION": "1.2.0"
+    }
+  },
+  // Needed only so init-firewall.sh can program iptables inside the container.
+  "runArgs": ["--cap-add=NET_ADMIN", "--cap-add=NET_RAW"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "eamodio.gitlens"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "bash": { "path": "bash", "icon": "terminal-bash" },
+          "zsh": { "path": "zsh" }
+        }
+      }
+    }
+  },
+  "remoteUser": "node",
+  "mounts": [
+    "source=claude-code-bashhistory-${devcontainerId},target=/commandhistory,type=volume",
+    // Claude auth, settings and history survive rebuilds; nothing from the host's ~/.claude is shared.
+    "source=claude-code-config-${devcontainerId},target=/home/node/.claude,type=volume",
+    // Keep Linux node_modules separate from the host's macOS node_modules
+    // (better-sqlite3 is a native module and the binaries are not interchangeable).
+    "source=cohort-005-node-modules-${devcontainerId},target=/workspace/node_modules,type=volume"
+  ],
+  "containerEnv": {
+    "NODE_OPTIONS": "--max-old-space-size=4096",
+    "CLAUDE_CONFIG_DIR": "/home/node/.claude",
+    "POWERLEVEL9K_DISABLE_GITSTATUS": "true"
+  },
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+  "workspaceFolder": "/workspace",
+  "forwardPorts": [5173, 8787],
+  "portsAttributes": {
+    "5173": { "label": "App (npm run dev)" },
+    "8787": { "label": "Request logger (npm run request-logger)" }
+  },
+  // Runs once, before the firewall is up, so native-module downloads (better-sqlite3) succeed.
+  "postCreateCommand": "sudo /usr/local/bin/fix-node-modules-owner.sh && npm ci",
+  "postStartCommand": "sudo /usr/local/bin/init-firewall.sh",
+  "waitFor": "postStartCommand"
+}
