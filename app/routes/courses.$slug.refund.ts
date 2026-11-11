@@ -5,7 +5,7 @@ import { getCurrentUserId } from "~/lib/session";
 import { db } from "~/db";
 import {
   courses,
-  coupons,
+  seats,
   lessons,
   modules,
   purchases,
@@ -147,18 +147,18 @@ export async function action({ params, request }: Route.ActionArgs) {
     });
   }
 
-  // A seat that came out of a team licence, and has been claimed, belongs to
+  // A seat that came out of a team licence, and has been redeemed, belongs to
   // the team — the learner cannot hand it back on their own.
-  const claimedSeat = db
-    .select({ id: coupons.id })
-    .from(coupons)
+  const redeemedSeat = db
+    .select({ id: seats.id })
+    .from(seats)
     .where(
-      and(eq(coupons.purchaseId, purchase.id), isNotNull(coupons.redeemedAt))
+      and(eq(seats.purchaseId, purchase.id), isNotNull(seats.redeemedAt))
     )
     .get();
 
-  if (claimedSeat) {
-    throw data("A claimed team seat cannot be cancelled.", { status: 403 });
+  if (redeemedSeat) {
+    throw data("A team purchase can't be cancelled once a seat has been redeemed.", { status: 403 });
   }
 
   const today = calendarDay(new Date());

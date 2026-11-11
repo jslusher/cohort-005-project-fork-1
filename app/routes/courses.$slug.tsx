@@ -15,7 +15,7 @@ import {
   lessonProgress,
   courseRatings,
   purchases,
-  coupons,
+  seats,
   refunds,
   videoWatchEvents,
   LessonProgressStatus,
@@ -476,15 +476,15 @@ function getCancellationOffer(
     return null;
   }
 
-  const claimedSeat = db
-    .select({ id: coupons.id })
-    .from(coupons)
+  const redeemedSeat = db
+    .select({ id: seats.id })
+    .from(seats)
     .where(
-      and(eq(coupons.purchaseId, purchase.id), isNotNull(coupons.redeemedAt))
+      and(eq(seats.purchaseId, purchase.id), isNotNull(seats.redeemedAt))
     )
     .get();
 
-  if (claimedSeat) return null;
+  if (redeemedSeat) return null;
 
   // A purchasing-power price is given back at the price that was paid, not at
   // the list price of the course.
